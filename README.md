@@ -50,9 +50,56 @@ yarn dev
 
 | Method | Config | Security |
 |--------|--------|----------|
-| OpenWallet (recommended) | `OWS_WALLET_NAME=agent-treasury` | Policy-gated, agent never sees raw keys |
+| **OpenWallet (recommended)** | `OWS_WALLET_NAME=agent-treasury` | Policy-gated, agent never sees raw keys |
 | Keypair file | `SOLANA_KEYPAIR_PATH=~/.config/solana/id.json` | Local file |
 | Private key | `PRIVATE_KEY=base58_encoded_key` | Env var (least secure) |
+
+### Setting up OpenWallet (OWS)
+
+[OpenWallet](https://github.com/getnimbus/openwallet) is the recommended signing method — your bot never touches raw private keys. Transactions are signed through a policy-gated CLI, so you can restrict what your agent is allowed to do.
+
+#### Install via OpenClaw
+
+[OpenClaw](https://github.com/getnimbus/openclaw) is the package manager for Web3 CLI tools, including OWS.
+
+```bash
+# Install OpenClaw
+curl -fsSL https://openclaw.io/install.sh | bash
+
+# Install OpenWallet via OpenClaw
+openclaw install ows
+
+# Verify installation
+ows --version
+```
+
+#### Install OWS directly
+
+If you prefer not to use OpenClaw:
+
+```bash
+# macOS / Linux
+curl -fsSL https://openwallet.io/install.sh | bash
+
+# Or build from source
+git clone https://github.com/getnimbus/openwallet.git
+cd openwallet && make install
+```
+
+#### Create a wallet for your bot
+
+```bash
+# Create a new Solana wallet
+ows create wallet --name agent-treasury --chain solana
+
+# View the wallet address (fund this with SOL)
+ows address --wallet agent-treasury --chain solana
+
+# Set in your .env
+echo 'OWS_WALLET_NAME=agent-treasury' >> .env
+```
+
+The bot automatically detects OWS on your PATH and uses it for all transaction signing. If OWS is unavailable, it falls back to local keypair signing.
 
 ## Configuration
 
