@@ -29,11 +29,15 @@ function tryOws(walletName: string): Signer | null {
   return {
     publicKey,
     async signTransaction(txBase64: string): Promise<string> {
-      const result = execSync(
-        `ows sign transaction --wallet ${walletName} --chain solana --data ${txBase64}`,
-        { encoding: "utf-8" }
-      ).trim();
-      return result;
+      try {
+        const result = execSync(
+          `ows sign transaction --wallet ${walletName} --chain solana --data ${txBase64}`,
+          { encoding: "utf-8" }
+        ).trim();
+        return result;
+      } catch (err) {
+        throw new Error(`OWS signing failed: ${err}`);
+      }
     },
   };
 }
@@ -95,7 +99,7 @@ function tryLocalKeypair(config: Config): Signer | null {
         // Fall back to legacy transaction
         const ltx = Transaction.from(txBuf);
         ltx.partialSign(keypair);
-        signed = Buffer.from(ltx.serialize());
+        signed = Buffer.from(ltx.serialize({ requireAllSignatures: false }));
       }
 
       return signed.toString("base64");

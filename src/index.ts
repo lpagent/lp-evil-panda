@@ -81,7 +81,7 @@ async function runScanCycle(
       const inputSOL = Math.min(solBalance * 0.3, solBalance - 0.05); // Use 30% or leave 0.05 for fees
       if (inputSOL < 0.01) {
         console.log("[main] Insufficient SOL for position entry");
-        break;
+        continue;
       }
 
       const result = await executeZapIn(lpAgent, signer, config, pool.pool, poolInfo, inputSOL);
@@ -95,6 +95,7 @@ async function runScanCycle(
           strategy: config.strategyType,
         });
         recordPump(state, pool.token0);
+        saveState(state);
         await telegram.notifyEntry(pool.pool, `${pool.token0_symbol}/${pool.token1_symbol}`, config.strategyType, inputSOL);
         console.log(`[main] ✅ Position opened: ${result.positionPubKey.slice(0, 12)}...`);
       }
@@ -125,6 +126,7 @@ async function runMonitorCycle(
         const result = await executeZapOut(lpAgent, signer, config, decision.position);
         if (result) {
           removePosition(state, decision.tracked.positionId);
+          saveState(state);
           await telegram.notifyExit(
             decision.position.pairName,
             decision.reason,

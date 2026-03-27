@@ -61,7 +61,19 @@ export async function evaluatePositions(
     }
 
     // Fetch 15m candles from GeckoTerminal for exit signal analysis
-    const candles = await gecko.getOHLCV(pos.pool, { aggregate: 15, limit: 100 });
+    let candles: Awaited<ReturnType<typeof gecko.getOHLCV>>;
+    try {
+      candles = await gecko.getOHLCV(pos.pool, { aggregate: 15, limit: 100 });
+    } catch (err) {
+      console.error(`[position-manager] Failed to fetch candles for ${pos.pairName}:`, err);
+      decisions.push({
+        position: pos,
+        tracked,
+        action: "hold",
+        reason: "Candle fetch failed — holding",
+      });
+      continue;
+    }
 
     if (candles.length === 0) {
       // Can't compute signals — hold by default (safe)
