@@ -64,7 +64,11 @@ All parameters are configurable via `.env`. See [.env.example](.env.example) for
 |-----------|---------|-------------|
 | `STRATEGY_TYPE` | `Spot` | DLMM strategy: `Spot`, `Curve`, or `BidAsk` |
 | `RANGE_PERCENT_LOW` | `80` | Lower range bound (% below active bin) |
+| `RANGE_PERCENT_HIGH` | `90` | Upper range bound (% below active bin) |
 | `MAX_POSITIONS` | `3` | Maximum concurrent LP positions |
+| `POLL_INTERVAL_MS` | `60000` | Exit monitoring interval (ms) |
+| `SCAN_INTERVAL_MS` | `300000` | Pool scanning interval (ms) |
+| `SLIPPAGE_BPS` | `100` | Slippage tolerance in basis points |
 | `STOP_LOSS_HOURS` | `24` | Hard stop-loss timer |
 
 ### Scanner filters
@@ -73,8 +77,10 @@ All parameters are configurable via `.env`. See [.env.example](.env.example) for
 |-----------|---------|-------------|
 | `MIN_VOL_24H` | `50000` | Minimum 24h volume (USD) |
 | `MIN_LIQUIDITY` | `10000` | Minimum pool liquidity (USD) |
-| `MIN_MCap` | `100000` | Minimum market cap |
+| `MIN_MCAP` | `100000` | Minimum market cap |
 | `MAX_MCAP` | `50000000` | Maximum market cap |
+| `MIN_AGE_HR` | `1` | Minimum pool age (hours) |
+| `MAX_AGE_HR` | `720` | Maximum pool age (hours) |
 | `MIN_PRICE_CHANGE_1H` | `10` | Minimum 1h price change (%) |
 | `MIN_ORGANIC_SCORE` | `30` | Minimum organic activity score |
 
@@ -128,9 +134,14 @@ test/
 ## Testing
 
 ```bash
+yarn build         # Compile TypeScript
 yarn test          # Run all tests
 yarn test:watch    # Watch mode
 ```
+
+## Roadmap
+
+See [TODOS.md](TODOS.md) for planned features.
 
 ## License
 
