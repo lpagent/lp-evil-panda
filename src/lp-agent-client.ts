@@ -125,14 +125,14 @@ export class LpAgentClient {
     qs.set("chain", "SOL");
     if (params.sortBy) qs.set("sortBy", params.sortBy);
     if (params.sortOrder) qs.set("sortOrder", params.sortOrder);
-    if (params.pageSize) qs.set("pageSize", String(params.pageSize));
-    if (params.minMcap) qs.set("min_market_cap", String(params.minMcap));
-    if (params.maxMcap) qs.set("max_market_cap", String(params.maxMcap));
-    if (params.minVol24h) qs.set("min_24h_vol", String(params.minVol24h));
-    if (params.minLiquidity) qs.set("min_liquidity", String(params.minLiquidity));
-    if (params.minOrganicScore) qs.set("min_organic_score", String(params.minOrganicScore));
-    if (params.minAgeHr) qs.set("min_age_hr", String(params.minAgeHr));
-    if (params.maxAgeHr) qs.set("max_age_hr", String(params.maxAgeHr));
+    if (params.pageSize != null) qs.set("pageSize", String(params.pageSize));
+    if (params.minMcap != null) qs.set("min_market_cap", String(params.minMcap));
+    if (params.maxMcap != null) qs.set("max_market_cap", String(params.maxMcap));
+    if (params.minVol24h != null) qs.set("min_24h_vol", String(params.minVol24h));
+    if (params.minLiquidity != null) qs.set("min_liquidity", String(params.minLiquidity));
+    if (params.minOrganicScore != null) qs.set("min_organic_score", String(params.minOrganicScore));
+    if (params.minAgeHr != null) qs.set("min_age_hr", String(params.minAgeHr));
+    if (params.maxAgeHr != null) qs.set("max_age_hr", String(params.maxAgeHr));
     return this.request<PoolDiscoveryItem[]>(`/pools/discover?${qs.toString()}`);
   }
 

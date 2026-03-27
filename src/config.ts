@@ -49,7 +49,19 @@ function envStr(key: string, fallback?: string): string {
 
 function envNum(key: string, fallback: number): number {
   const val = process.env[key];
-  return val ? Number(val) : fallback;
+  if (!val) return fallback;
+  const num = Number(val);
+  if (isNaN(num)) throw new Error(`Invalid numeric env var: ${key}=${val}`);
+  return num;
+}
+
+const VALID_STRATEGIES = ["Spot", "Curve", "BidAsk"] as const;
+function validateStrategy(val?: string): Config["strategyType"] {
+  if (!val) return "Spot";
+  if (!VALID_STRATEGIES.includes(val as any)) {
+    throw new Error(`Invalid STRATEGY_TYPE: "${val}". Must be one of: ${VALID_STRATEGIES.join(", ")}`);
+  }
+  return val as Config["strategyType"];
 }
 
 export function loadConfig(): Config {
@@ -64,7 +76,7 @@ export function loadConfig(): Config {
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
     telegramChatId: process.env.TELEGRAM_CHAT_ID,
 
-    strategyType: (process.env.STRATEGY_TYPE as Config["strategyType"]) || "Spot",
+    strategyType: validateStrategy(process.env.STRATEGY_TYPE),
     rangePercentLow: envNum("RANGE_PERCENT_LOW", 80),
     rangePercentHigh: envNum("RANGE_PERCENT_HIGH", 90),
     maxPositions: envNum("MAX_POSITIONS", 3),
