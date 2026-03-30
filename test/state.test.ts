@@ -16,6 +16,8 @@ describe("state", () => {
     const state = loadState();
     expect(state.positions).toEqual([]);
     expect(state.seenCoins).toEqual({});
+    expect(state.circuitBreaker.state).toBe("closed");
+    expect(state.circuitBreaker.consecutiveFailures).toBe(0);
   });
 
   it("handles corrupt state file gracefully", () => {
@@ -23,10 +25,15 @@ describe("state", () => {
     const state = loadState();
     expect(state.positions).toEqual([]);
     expect(state.seenCoins).toEqual({});
+    expect(state.circuitBreaker.state).toBe("closed");
   });
 
   it("tracks pump counts correctly", () => {
-    const state: AppState = { positions: [], seenCoins: {} };
+    const state: AppState = {
+      positions: [],
+      seenCoins: {},
+      circuitBreaker: { state: "closed", consecutiveFailures: 0, openedAt: null },
+    };
     expect(getPumpCount(state, "token1")).toBe(0);
 
     recordPump(state, "token1");
@@ -41,7 +48,11 @@ describe("state", () => {
   });
 
   it("adds and removes positions", () => {
-    const state: AppState = { positions: [], seenCoins: {} };
+    const state: AppState = {
+      positions: [],
+      seenCoins: {},
+      circuitBreaker: { state: "closed", consecutiveFailures: 0, openedAt: null },
+    };
 
     addPosition(state, {
       positionId: "pos1",
@@ -57,5 +68,23 @@ describe("state", () => {
 
     removePosition(state, "pos1");
     expect(state.positions.length).toBe(0);
+  });
+
+  it("loads persisted circuit breaker state", () => {
+    const persisted = {
+      positions: [],
+      seenCoins: {},
+      circuitBreaker: {
+        state: "open",
+        consecutiveFailures: 3,
+        openedAt: 12345,
+      },
+    };
+
+    saveState(persisted as AppState);
+    const loaded = loadState();
+    expect(loaded.circuitBreaker.state).toBe("open");
+    expect(loaded.circuitBreaker.consecutiveFailures).toBe(3);
+    expect(loaded.circuitBreaker.openedAt).toBe(12345);
   });
 });

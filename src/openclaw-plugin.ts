@@ -1,5 +1,10 @@
 import { loadState } from "./state.js";
-import { runMonitorOnce, runScanOnce } from "./orchestrator.js";
+import {
+  getCircuitBreakerSnapshot,
+  resetCircuitBreakerState,
+  runMonitorOnce,
+  runScanOnce,
+} from "./orchestrator.js";
 import { runSetupBootstrap } from "./setup.js";
 
 const plugin = {
@@ -57,6 +62,32 @@ const plugin = {
       description: "Alias for lp-start.",
       acceptsArgs: false,
       handler: setupHandler,
+    });
+
+    api.registerCommand({
+      name: "lp-circuit-status",
+      description: "Show circuit breaker status and cooldown.",
+      acceptsArgs: false,
+      handler: async () => {
+        const s = getCircuitBreakerSnapshot();
+        return {
+          text:
+            `LP Evil Panda circuit breaker\n` +
+            `- state: ${s.state}\n` +
+            `- consecutive failures: ${s.consecutiveFailures}\n` +
+            `- cooldown remaining: ${Math.ceil(s.cooldownRemainingMs / 1000)}s`,
+        };
+      },
+    });
+
+    api.registerCommand({
+      name: "lp-circuit-reset",
+      description: "Manually reset circuit breaker to closed state.",
+      acceptsArgs: false,
+      handler: async () => {
+        resetCircuitBreakerState();
+        return { text: "✅ Circuit breaker reset to closed state." };
+      },
     });
   },
 };

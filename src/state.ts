@@ -9,23 +9,42 @@ export interface TrackedPosition {
   strategy: string;
 }
 
+export interface CircuitBreakerState {
+  state: "closed" | "open" | "half_open";
+  consecutiveFailures: number;
+  openedAt: number | null;
+}
+
 export interface AppState {
   positions: TrackedPosition[];
   seenCoins: Record<string, number>; // tokenMint -> pump count
+  circuitBreaker: CircuitBreakerState;
 }
 
 const STATE_FILE = "state.json";
 
-const EMPTY_STATE: AppState = { positions: [], seenCoins: {} };
+const EMPTY_STATE: AppState = {
+  positions: [],
+  seenCoins: {},
+  circuitBreaker: { state: "closed", consecutiveFailures: 0, openedAt: null },
+};
 
 export function loadState(): AppState {
   if (!existsSync(STATE_FILE)) return { ...EMPTY_STATE, positions: [], seenCoins: {} };
   try {
     const raw = readFileSync(STATE_FILE, "utf-8");
     const parsed = JSON.parse(raw);
+    const breaker = parsed.circuitBreaker && typeof parsed.circuitBreaker === "object"
+      ? parsed.circuitBreaker
+      : {};
     return {
       positions: Array.isArray(parsed.positions) ? parsed.positions : [],
       seenCoins: parsed.seenCoins && typeof parsed.seenCoins === "object" ? parsed.seenCoins : {},
+      circuitBreaker: {
+        state: breaker.state === "open" || breaker.state === "half_open" ? breaker.state : "closed",
+        consecutiveFailures: typeof breaker.consecutiveFailures === "number" ? breaker.consecutiveFailures : 0,
+        openedAt: typeof breaker.openedAt === "number" ? breaker.openedAt : null,
+      },
     };
   } catch {
     console.warn("[state] Corrupt state file — starting fresh");

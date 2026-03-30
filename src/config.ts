@@ -39,6 +39,11 @@ export interface Config {
   rsiExitThreshold: number;
   bbPeriod: number;
   bbStdDev: number;
+
+  // Circuit breaker
+  circuitBreakerEnabled: boolean;
+  circuitBreakerFailureThreshold: number;
+  circuitBreakerCooldownMs: number;
 }
 
 function envStr(key: string, fallback?: string): string {
@@ -53,6 +58,15 @@ function envNum(key: string, fallback: number): number {
   const num = Number(val);
   if (isNaN(num)) throw new Error(`Invalid numeric env var: ${key}=${val}`);
   return num;
+}
+
+function envBool(key: string, fallback: boolean): boolean {
+  const val = process.env[key];
+  if (!val) return fallback;
+  const lowered = val.toLowerCase();
+  if (lowered === "true" || lowered === "1") return true;
+  if (lowered === "false" || lowered === "0") return false;
+  throw new Error(`Invalid boolean env var: ${key}=${val}`);
 }
 
 const VALID_STRATEGIES = ["Spot", "Curve", "BidAsk"] as const;
@@ -98,5 +112,9 @@ export function loadConfig(): Config {
     rsiExitThreshold: envNum("RSI_EXIT_THRESHOLD", 90),
     bbPeriod: envNum("BB_PERIOD", 20),
     bbStdDev: envNum("BB_STD_DEV", 2),
+
+    circuitBreakerEnabled: envBool("CIRCUIT_BREAKER_ENABLED", true),
+    circuitBreakerFailureThreshold: envNum("CIRCUIT_BREAKER_FAILURE_THRESHOLD", 3),
+    circuitBreakerCooldownMs: envNum("CIRCUIT_BREAKER_COOLDOWN_MS", 300_000),
   };
 }
