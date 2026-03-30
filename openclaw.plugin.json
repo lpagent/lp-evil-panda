@@ -1,0 +1,11 @@
+{
+  "id": "lp-evil-panda",
+  "enabledByDefault": true,
+  "name": "LP Evil Panda",
+  "description": "OpenClaw orchestration bridge for LP Evil Panda scan and monitor cycles.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

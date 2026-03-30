@@ -1,6 +1,6 @@
 # LP Evil Panda
 
-Autonomous Meteora DLMM liquidity provision bot implementing the **Evil Panda** strategy, powered by the [LP Agent API](https://portal.lpagent.io).
+Meteora DLMM liquidity provision strategy implementing **Evil Panda**, powered by the [LP Agent API](https://portal.lpagent.io). This repo contains the bot core and is intended to be used as an OpenClaw-managed plugin/integration for running the strategy.
 
 ## What it does
 
@@ -12,6 +12,8 @@ Autonomous Meteora DLMM liquidity provision bot implementing the **Evil Panda** 
 
 ## Architecture
 
+Current code path:
+
 ```
 Scanner ──→ Executor (zap-in) ──→ Position Manager ──→ Executor (zap-out)
    │              │                       │                    │
@@ -20,7 +22,13 @@ LP Agent API   Signer (OWS/local)   GeckoTerminal       LP Agent API
 + Jupiter      + Jito bundles        15m OHLCV           + Jito bundles
 ```
 
-**Priority-based polling:**
+Intended operating model:
+
+```
+OpenClaw ──→ scheduled scan / heartbeat monitor ──→ bot core in this repo
+```
+
+**Priority-based polling in the current implementation:**
 - Exit monitoring: every 1 minute (high priority)
 - Pool scanning: every 5 minutes (lower priority)
 
@@ -36,9 +44,17 @@ yarn install
 cp .env.example .env
 # Edit .env — at minimum set LP_AGENT_API_KEY and a wallet option
 
-# Run
+# Run locally (standalone loop)
 yarn dev
+
+# Run a single scan tick
+yarn scan:once
+
+# Run a single monitor/heartbeat tick
+yarn monitor:once
 ```
+
+For production use, install this repo as an OpenClaw plugin and trigger `lp-scan` on cron + `lp-monitor` on heartbeat cadence.
 
 ### Get your LP Agent API key
 
@@ -64,12 +80,13 @@ Use the official links:
 
 - [OpenWallet](https://openwallet.sh/)
 - [OpenWallet docs](https://docs.openwallet.sh/)
-- [OpenClaw](https://openclaw.ai/) (optional package manager)
+- [OpenClaw](https://openclaw.ai/) (orchestrator / assistant)
 
-If you already have OpenClaw installed, install OWS with:
+OpenClaw is the intended orchestration layer for this strategy. OpenWallet / `ows` is still the signing layer used by the bot.
+
+If your OpenClaw workflow installs OWS for you, verify it with:
 
 ```bash
-openclaw install ows
 ows --version
 ```
 
@@ -87,6 +104,37 @@ echo 'OWS_WALLET_NAME=agent-treasury' >> .env
 ```
 
 The bot automatically detects OWS on your PATH and uses it for all transaction signing. If OWS is unavailable, it falls back to local keypair signing.
+
+## OpenClaw orchestration model
+
+This repo should be treated as the strategy core that OpenClaw drives.
+
+OpenClaw-facing surfaces added in this repo:
+- plugin entry: `src/openclaw-plugin.ts`
+- plugin manifest: `openclaw.plugin.json`
+- one-shot scan runner: `src/scan-once.ts`
+- one-shot monitor runner: `src/monitor-once.ts`
+
+Registered OpenClaw commands:
+- `lp-scan` — run one entry scan / execution cycle
+- `lp-monitor` — run one monitor / exit cycle
+- `lp-status` — show tracked local state
+
+Recommended OpenClaw responsibilities:
+- trigger `lp-scan` on a cron schedule
+- trigger `lp-monitor` on a heartbeat cadence
+- surface alerts / progress updates
+- restart or re-run monitoring flows after failures
+
+Suggested cadence:
+- heartbeat / monitor: every 60s
+- cron / scan: every 5m
+
+These match the strategy defaults:
+- `POLL_INTERVAL_MS=60000`
+- `SCAN_INTERVAL_MS=300000`
+
+To avoid overlapping jobs, discrete runners use a repo-local lock file: `.openclaw-orchestrator.lock`.
 
 ## Configuration
 
@@ -145,7 +193,14 @@ This bot demonstrates the full LP Agent API workflow:
 
 ```
 src/
-  index.ts              Main loop with priority-based polling
+  index.ts              Standalone entrypoint
+  orchestrator.ts       Standalone loop + one-shot orchestration runners
+  app-context.ts        Shared bootstrap for config/clients/state
+  cycles.ts             Reusable scan and monitor cycle logic
+  openclaw-plugin.ts    OpenClaw plugin commands (lp-scan, lp-monitor, lp-status)
+  scan-once.ts          One-shot scan entrypoint
+  monitor-once.ts       One-shot monitor entrypoint
+  run-lock.ts           Lock file protection for discrete jobs
   config.ts             Environment config loader
   lp-agent-client.ts    LP Agent API client (typed)
   gecko-client.ts       GeckoTerminal OHLCV client (rate-limited)
@@ -172,6 +227,15 @@ yarn build         # Compile TypeScript
 yarn test          # Run all tests
 yarn test:watch    # Watch mode
 ```
+
+## OpenClaw plugin packaging notes
+
+This repository now exposes an OpenClaw plugin extension via `package.json`:
+
+- `openclaw.extensions`: `./dist/openclaw-plugin.js`
+- manifest file: `openclaw.plugin.json`
+
+After `yarn build`, OpenClaw can load the built extension entry.
 
 ## Roadmap
 

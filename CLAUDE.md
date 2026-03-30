@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run in dev mode (TypeScript via tsx): `yarn dev`
 - Build: `yarn build`
 - Run built bot: `yarn start`
+- Run one scan cycle: `yarn scan:once`
+- Run one monitor/heartbeat cycle: `yarn monitor:once`
 - Run all tests once: `yarn test`
 - Run tests in watch mode: `yarn test:watch`
 - Run a single test file: `yarn test test/executor.test.ts`
@@ -26,14 +28,22 @@ Notes:
 
 ## Architecture overview
 
-This is a single-process autonomous trading bot for Meteora DLMM “Evil Panda” strategy.
+This repo contains the bot core for Meteora DLMM “Evil Panda” strategy.
 
-Primary control flow (`src/index.ts`):
-1. Load config, initialize clients/signer/telegram, load persisted state.
-2. On each loop (`pollIntervalMs`):
-   - **Monitor existing positions first** via `evaluatePositions`.
-   - **Scan for new pools less frequently** via `scanIntervalMs`.
-3. Persist state to `state.json` on position changes and shutdown.
+Important project intent: this should be treated as an OpenClaw-managed plugin/integration, not only as a standalone bot. OpenClaw is the orchestration layer; the code here is the strategy engine.
+
+Primary control flow in standalone mode:
+1. `src/index.ts` delegates to `runStandaloneLoop()` in `src/orchestrator.ts`.
+2. `src/orchestrator.ts` builds app context (`src/app-context.ts`) and runs:
+   - `runMonitorCycle()` from `src/cycles.ts` on poll cadence
+   - `runScanCycle()` from `src/cycles.ts` on scan cadence
+3. State persists via `src/state.ts` and one-shot/loop runs are protected by `.openclaw-orchestrator.lock`.
+
+OpenClaw integration expectation:
+- use OpenClaw cron/scheduled jobs for scan cadence
+- use OpenClaw heartbeat checks for frequent position-monitor cadence
+- use plugin commands `lp-scan`, `lp-monitor`, and `lp-status` from `src/openclaw-plugin.ts`
+- keep bot-level strategy intervals aligned with env defaults unless intentionally changed
 
 Core modules and responsibilities:
 
@@ -77,6 +87,18 @@ Core modules and responsibilities:
 - `src/state.ts`
   - JSON persistence in repo root (`state.json`) for tracked positions and seen token pump counts.
 
+- `src/app-context.ts`
+  - Shared bootstrap for config, clients, signer, telegram, and persisted state.
+
+- `src/cycles.ts`
+  - Reusable one-pass scan and monitor cycle implementations used by standalone mode and OpenClaw mode.
+
+- `src/orchestrator.ts`
+  - Standalone loop plus one-shot orchestration runners with lock protection.
+
+- `src/openclaw-plugin.ts`
+  - OpenClaw plugin bridge registering `lp-scan`, `lp-monitor`, and `lp-status` commands.
+
 - `src/telegram.ts`
   - Optional notifications for startup, entry, exit, and errors.
 
@@ -93,5 +115,7 @@ Core modules and responsibilities:
 ## Important implementation details
 
 - TypeScript build compiles only `src/**/*` to `dist/`; tests are excluded from TS build (`tsconfig.json`).
+- OpenClaw plugin metadata lives in `openclaw.plugin.json`, and `package.json` exposes `./dist/openclaw-plugin.js` under the `openclaw.extensions` key.
 - Runtime state is file-based (`state.json`), so local runs can affect subsequent behavior unless state is reset.
+- One-shot orchestration runners use `.openclaw-orchestrator.lock` to prevent overlapping cron/heartbeat executions.
 - `runScanCycle` sizes entries from SOL balance (`~30%` with fee buffer), so wallet balance directly affects behavior.
