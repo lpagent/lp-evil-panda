@@ -1,12 +1,11 @@
-import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { loadState } from "./state.js";
 import { runMonitorOnce, runScanOnce } from "./orchestrator.js";
 
-export default definePluginEntry({
+const plugin = {
   id: "lp-evil-panda",
   name: "LP Evil Panda",
   description: "OpenClaw orchestration bridge for LP Evil Panda scan and heartbeat monitor jobs.",
-  register(api) {
+  register(api: any) {
     api.registerCommand({
       name: "lp-scan",
       description: "Run one scan cycle (entry discovery + potential zap-in).",
@@ -41,4 +40,6 @@ export default definePluginEntry({
       },
     });
   },
-});
+};
+
+export default plugin;
