@@ -56,34 +56,21 @@ yarn dev
 
 ### Setting up OpenWallet (OWS)
 
-[OpenWallet](https://github.com/getnimbus/openwallet) is the recommended signing method — your bot never touches raw private keys. Transactions are signed through a policy-gated CLI, so you can restrict what your agent is allowed to do.
+[OpenWallet](https://openwallet.sh/) is the recommended signing method — your bot never touches raw private keys. Transactions are signed through a policy-gated CLI, so you can restrict what your agent is allowed to do.
 
-#### Install via OpenClaw
+#### Install OWS
 
-[OpenClaw](https://github.com/getnimbus/openclaw) is the package manager for Web3 CLI tools, including OWS.
+Use the official links:
+
+- [OpenWallet](https://openwallet.sh/)
+- [OpenWallet docs](https://docs.openwallet.sh/)
+- [OpenClaw](https://openclaw.ai/) (optional package manager)
+
+If you already have OpenClaw installed, install OWS with:
 
 ```bash
-# Install OpenClaw
-curl -fsSL https://openclaw.io/install.sh | bash
-
-# Install OpenWallet via OpenClaw
 openclaw install ows
-
-# Verify installation
 ows --version
-```
-
-#### Install OWS directly
-
-If you prefer not to use OpenClaw:
-
-```bash
-# macOS / Linux
-curl -fsSL https://openwallet.io/install.sh | bash
-
-# Or build from source
-git clone https://github.com/getnimbus/openwallet.git
-cd openwallet && make install
 ```
 
 #### Create a wallet for your bot
