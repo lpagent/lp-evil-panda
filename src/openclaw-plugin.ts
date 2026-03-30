@@ -1,5 +1,6 @@
 import { loadState } from "./state.js";
 import { runMonitorOnce, runScanOnce } from "./orchestrator.js";
+import { runSetupBootstrap } from "./setup.js";
 
 const plugin = {
   id: "lp-evil-panda",
@@ -38,6 +39,24 @@ const plugin = {
           text: `LP Evil Panda state\n- tracked positions: ${tracked}\n- tracked token pumps: ${seen}`,
         };
       },
+    });
+
+    const setupHandler = async () => {
+      return await runSetupBootstrap();
+    };
+
+    api.registerCommand({
+      name: "lp-start",
+      description: "Guide setup, validate wallet/API readiness, and auto-install OpenWallet if needed.",
+      acceptsArgs: false,
+      handler: setupHandler,
+    });
+
+    api.registerCommand({
+      name: "lp-setup",
+      description: "Alias for lp-start.",
+      acceptsArgs: false,
+      handler: setupHandler,
     });
   },
 };

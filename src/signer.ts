@@ -1,5 +1,5 @@
 import { Keypair, VersionedTransaction, Transaction } from "@solana/web3.js";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { readFileSync, existsSync } from "fs";
 import bs58 from "bs58";
 import type { Config } from "./config.js";
@@ -11,15 +11,14 @@ export interface Signer {
 
 function tryOws(walletName: string): Signer | null {
   try {
-    execSync("which ows", { stdio: "ignore" });
+    execFileSync("ows", ["--version"], { stdio: "ignore" });
   } catch {
     return null;
   }
 
-  // Get the public key from OWS
   let publicKey: string;
   try {
-    publicKey = execSync(`ows address --wallet ${walletName} --chain solana`, {
+    publicKey = execFileSync("ows", ["address", "--wallet", walletName, "--chain", "solana"], {
       encoding: "utf-8",
     }).trim();
   } catch {
@@ -30,8 +29,9 @@ function tryOws(walletName: string): Signer | null {
     publicKey,
     async signTransaction(txBase64: string): Promise<string> {
       try {
-        const result = execSync(
-          `ows sign transaction --wallet ${walletName} --chain solana --data ${txBase64}`,
+        const result = execFileSync(
+          "ows",
+          ["sign", "transaction", "--wallet", walletName, "--chain", "solana", "--data", txBase64],
           { encoding: "utf-8" }
         ).trim();
         return result;

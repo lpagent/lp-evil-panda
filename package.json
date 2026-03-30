@@ -1,6 +1,6 @@
 {
   "name": "lp-evil-panda",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Autonomous Meteora LP bot implementing the Evil Panda strategy via LP Agent API",
   "type": "module",
   "main": "dist/index.js",

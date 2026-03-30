@@ -105,6 +105,8 @@ echo 'OWS_WALLET_NAME=agent-treasury' >> .env
 
 The bot automatically detects OWS on your PATH and uses it for all transaction signing. If OWS is unavailable, it falls back to local keypair signing.
 
+When running as OpenClaw plugin, `lp-start` / `lp-setup` can attempt to install OWS automatically via `npm i -g @open-wallet-standard/core` when `OWS_WALLET_NAME` is configured but `ows` is missing.
+
 ## OpenClaw orchestration model
 
 This repo should be treated as the strategy core that OpenClaw drives.
@@ -116,6 +118,8 @@ OpenClaw-facing surfaces added in this repo:
 - one-shot monitor runner: `src/monitor-once.ts`
 
 Registered OpenClaw commands:
+- `lp-start` — bootstrap setup check (env + signer + balance) and attempt OpenWallet auto-install if `OWS_WALLET_NAME` is set but `ows` is missing
+- `lp-setup` — alias of `lp-start`
 - `lp-scan` — run one entry scan / execution cycle
 - `lp-monitor` — run one monitor / exit cycle
 - `lp-status` — show tracked local state
