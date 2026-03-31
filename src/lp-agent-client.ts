@@ -85,14 +85,46 @@ export interface TokenBalance {
 export class LpAgentClient {
   private baseUrl: string;
   private apiKey: string;
+  private verboseApiLogs: boolean;
 
   constructor(config: Config) {
     this.baseUrl = config.lpAgentBaseUrl;
     this.apiKey = config.lpAgentApiKey;
+    this.verboseApiLogs = config.verboseApiLogs;
+  }
+
+  private toLogPayload(value: unknown): unknown {
+    if (typeof value !== "string") return value;
+    if (value.length > 800) return `${value.slice(0, 800)}...`;
+    return value;
+  }
+
+  private toSummary(value: unknown): unknown {
+    if (Array.isArray(value)) return { type: "array", length: value.length };
+    if (value && typeof value === "object") {
+      return { type: "object", keys: Object.keys(value as Record<string, unknown>).slice(0, 10) };
+    }
+    return value;
+  }
+
+  private verboseLog(message: string, extra?: unknown): void {
+    if (!this.verboseApiLogs) return;
+    if (extra === undefined) {
+      console.log(`[verbose][lp-agent] ${message}`);
+      return;
+    }
+    console.log(`[verbose][lp-agent] ${message}`, extra);
   }
 
   private async request<T>(path: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${path}`;
+    const method = options?.method ?? "GET";
+    const startedAt = Date.now();
+
+    this.verboseLog(`${method} ${path} request`, {
+      body: this.toLogPayload(options?.body),
+    });
+
     const res = await fetch(url, {
       ...options,
       headers: {
@@ -101,12 +133,39 @@ export class LpAgentClient {
         ...options?.headers,
       },
     });
+
+    const elapsedMs = Date.now() - startedAt;
+    const raw = await res.text();
+
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`LP Agent API error ${res.status}: ${body}`);
+      this.verboseLog(`${method} ${path} failed`, {
+        status: res.status,
+        elapsedMs,
+        body: this.toLogPayload(raw),
+      });
+      throw new Error(`LP Agent API error ${res.status}: ${raw}`);
     }
-    const json = await res.json();
-    return (json as { data: T }).data ?? (json as T);
+
+    let json: unknown;
+    try {
+      json = raw ? JSON.parse(raw) : null;
+    } catch {
+      this.verboseLog(`${method} ${path} invalid JSON`, {
+        status: res.status,
+        elapsedMs,
+        body: this.toLogPayload(raw),
+      });
+      throw new Error(`LP Agent API returned invalid JSON for ${path}`);
+    }
+
+    const data = (json as { data?: T })?.data ?? (json as T);
+    this.verboseLog(`${method} ${path} success`, {
+      status: res.status,
+      elapsedMs,
+      data: this.toSummary(data),
+    });
+
+    return data;
   }
 
   async discoverPools(params: {

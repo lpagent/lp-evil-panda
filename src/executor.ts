@@ -10,6 +10,33 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function parseRetryAfterMs(err: unknown): number | null {
+  const text = String(err);
+  const match = text.match(/retry[- ]after[^\d]*(\d+)/i);
+  if (!match) return null;
+  const seconds = Number(match[1]);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null;
+}
+
+function classifyRetry(err: unknown): "retry" | "stop" {
+  const text = String(err);
+  if (text.includes("API error 400") || text.includes("API error 401") || text.includes("API error 403") || text.includes("API error 404")) {
+    return "stop";
+  }
+  return "retry";
+}
+
+async function waitBeforeRetry(err: unknown, attempt: number): Promise<void> {
+  const text = String(err);
+  if (text.includes("API error 429")) {
+    const retryAfter = parseRetryAfterMs(err);
+    const backoffMs = Math.max(retryAfter ?? 0, RETRY_DELAY_MS * attempt * 2);
+    await sleep(backoffMs);
+    return;
+  }
+  await sleep(RETRY_DELAY_MS * attempt);
+}
+
 async function signAndSubmitTxs(
   txs: string[],
   signer: Signer,
@@ -77,8 +104,11 @@ export async function executeZapIn(
       };
     } catch (err) {
       console.error(`[executor] Zap-in attempt ${attempt} failed:`, err);
+      if (classifyRetry(err) === "stop") {
+        break;
+      }
       if (attempt < MAX_RETRIES) {
-        await sleep(RETRY_DELAY_MS * attempt);
+        await waitBeforeRetry(err, attempt);
       }
     }
   }
@@ -122,8 +152,11 @@ export async function executeZapOut(
       return { signature: result.signature };
     } catch (err) {
       console.error(`[executor] Zap-out attempt ${attempt} failed:`, err);
+      if (classifyRetry(err) === "stop") {
+        break;
+      }
       if (attempt < MAX_RETRIES) {
-        await sleep(RETRY_DELAY_MS * attempt);
+        await waitBeforeRetry(err, attempt);
       }
     }
   }

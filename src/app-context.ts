@@ -21,8 +21,8 @@ export function createAppContext(): AppContext {
   return {
     config,
     lpAgent: new LpAgentClient(config),
-    jupiter: new JupiterClient(),
-    gecko: new GeckoClient(),
+    jupiter: new JupiterClient(config.verboseApiLogs),
+    gecko: new GeckoClient(config.verboseApiLogs),
     signer: createSigner(config),
     telegram: new Telegram(config),
     state: loadState(),

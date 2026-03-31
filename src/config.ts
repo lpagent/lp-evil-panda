@@ -4,6 +4,7 @@ export interface Config {
   // LP Agent API
   lpAgentApiKey: string;
   lpAgentBaseUrl: string;
+  verboseApiLogs: boolean;
 
   // Wallet
   owsWalletName?: string;
@@ -82,6 +83,7 @@ export function loadConfig(): Config {
   return {
     lpAgentApiKey: envStr("LP_AGENT_API_KEY"),
     lpAgentBaseUrl: envStr("LP_AGENT_BASE_URL", "https://api.lpagent.io/open-api/v1"),
+    verboseApiLogs: envBool("VERBOSE_API_LOGS", false),
 
     owsWalletName: process.env.OWS_WALLET_NAME,
     solanaKeypairPath: process.env.SOLANA_KEYPAIR_PATH,

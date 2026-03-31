@@ -51,6 +51,29 @@ export async function scanForCandidates(
   for (const pool of pools) {
     const reasons: string[] = [];
 
+    // Defensive local filters in case upstream discovery filters are ignored or partial.
+    if (pool.mcap < config.minMcap || pool.mcap > config.maxMcap) {
+      continue;
+    }
+    if (pool.vol_24h < config.minVol24h) {
+      continue;
+    }
+    if (pool.tvl < config.minLiquidity) {
+      continue;
+    }
+    if (pool.token0_symbol === "SOL") {
+      continue;
+    }
+
+    if (pool.created_at) {
+      const ageHours = (Date.now() - new Date(pool.created_at).getTime()) / 3_600_000;
+      if (Number.isFinite(ageHours)) {
+        if (ageHours < config.minAgeHr || ageHours > config.maxAgeHr) {
+          continue;
+        }
+      }
+    }
+
     // Filter: price momentum (approximate ATH detection)
     if (pool.price_1h_change < config.minPriceChange1h) {
       continue; // Not pumping enough

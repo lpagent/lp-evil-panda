@@ -4,21 +4,34 @@ export class Telegram {
   private botToken?: string;
   private chatId?: string;
   private enabled: boolean;
+  private verboseApiLogs: boolean;
 
   constructor(config: Config) {
     this.botToken = config.telegramBotToken;
     this.chatId = config.telegramChatId;
     this.enabled = !!(this.botToken && this.chatId);
+    this.verboseApiLogs = config.verboseApiLogs;
     if (!this.enabled) {
       console.log("[telegram] No bot token or chat ID — alerts disabled");
     }
+  }
+
+  private verboseLog(message: string, extra?: unknown): void {
+    if (!this.verboseApiLogs) return;
+    if (extra === undefined) {
+      console.log(`[verbose][telegram] ${message}`);
+      return;
+    }
+    console.log(`[verbose][telegram] ${message}`, extra);
   }
 
   async send(message: string): Promise<void> {
     if (!this.enabled) return;
     try {
       const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-      await fetch(url, {
+      const startedAt = Date.now();
+      this.verboseLog("POST /sendMessage request", { chars: message.length });
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -27,7 +40,15 @@ export class Telegram {
           parse_mode: "Markdown",
         }),
       });
+      const elapsedMs = Date.now() - startedAt;
+      if (!res.ok) {
+        const body = await res.text();
+        this.verboseLog("POST /sendMessage failed", { status: res.status, elapsedMs, body });
+      } else {
+        this.verboseLog("POST /sendMessage success", { status: res.status, elapsedMs });
+      }
     } catch (err) {
+      this.verboseLog("POST /sendMessage error", { error: String(err) });
       console.error("[telegram] Failed to send:", err);
     }
   }

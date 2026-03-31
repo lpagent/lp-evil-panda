@@ -81,6 +81,52 @@ describe("executor", () => {
     expect(mockLpAgent.createZapInTx).toHaveBeenCalledTimes(3);
   });
 
+  it("stops retrying zap-in on 4xx non-rate-limit errors", async () => {
+    const mockLpAgent = {
+      createZapInTx: vi.fn().mockRejectedValue(new Error("LP Agent API error 400: bad request")),
+    } as any;
+
+    const mockSigner = {
+      publicKey: "wallet123",
+      signTransaction: vi.fn().mockResolvedValue("signedTx"),
+    };
+
+    const promise = executeZapIn(mockLpAgent, mockSigner, defaultConfig, "pool123", mockPoolInfo, 1.0);
+    await vi.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result).toBeNull();
+    expect(mockLpAgent.createZapInTx).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries zap-in on 429 with backoff", async () => {
+    const mockLpAgent = {
+      createZapInTx: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("LP Agent API error 429: too many requests"))
+        .mockResolvedValue({
+          lastValidBlockHeight: 100,
+          swapTxsWithJito: ["tx1"],
+          addLiquidityTxsWithJito: ["tx2"],
+          meta: { positionPubKey: "newPos429" },
+        }),
+      submitZapIn: vi.fn().mockResolvedValue({ signature: "sig429" }),
+    } as any;
+
+    const mockSigner = {
+      publicKey: "wallet123",
+      signTransaction: vi.fn().mockResolvedValue("signedTx"),
+    };
+
+    const promise = executeZapIn(mockLpAgent, mockSigner, defaultConfig, "pool123", mockPoolInfo, 1.0);
+    await vi.advanceTimersByTimeAsync(6000);
+    const result = await promise;
+
+    expect(result).not.toBeNull();
+    expect(result!.positionPubKey).toBe("newPos429");
+    expect(mockLpAgent.createZapInTx).toHaveBeenCalledTimes(2);
+  });
+
   it("verifies wallet state after failed zap-out", async () => {
     const mockLpAgent = {
       createZapOutTx: vi.fn().mockRejectedValue(new Error("Always fails")),
